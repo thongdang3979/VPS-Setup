@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  mariadb:
+    container_name: mariadb
+    image: mariadb:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command: '--default-authentication-plugin=mysql_native_password'
+    ports:
+      - ${MYSQL_PORT}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./mariadb_init.sql:/docker-entrypoint-initdb.d/mariadb_init.sql
+    networks:
+      - mariadb_network
+
+  adminer:
+    container_name: adminer
+    image: adminer:latest
+    restart: always
+    depends_on:
+      - mariadb
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    ports:
+      - ${ADMINER_PORT}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - mariadb_network
+
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - ${NGINX_PORT}
+    volumes:
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    networks:
+      - mariadb_network
+
+networks:
+  mariadb_network:
+    name: mariadb_network
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    name: mariadb_data
